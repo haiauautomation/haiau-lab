@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hải Âu Automation · Ladder Lab</title>
+<meta name="description" content="Mô phỏng PLC Ladder miễn phí của Hải Âu Automation: Start/Stop tự giữ, timer, counter, băng tải. Chạy ngay trên trình duyệt.">
+<style>
+:root{--bg:#f6f4f2;--card:#fff;--ink:#1d1d1f;--mut:#6b6b70;--line:#d9d5d0;--brand:#8B1A1A;--acc:#8B1A1A;--on:#1a9e4a;--off:#9a9aa0}
+@media(prefers-color-scheme:dark){:root{--bg:#141416;--card:#1e1e22;--ink:#ececf0;--mut:#9a9aa5;--line:#34343a;--acc:#e0604f;--off:#6b6b74;--on:#3ddc84}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 Arial,sans-serif}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--brand);color:#fff;flex-wrap:wrap}
+header small{display:block;opacity:.8}.logo{width:34px;height:34px}.sp{flex:1}
+.badge{padding:3px 10px;border-radius:99px;background:#fff3;font-weight:700;font-size:12px}
+button,.btn{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer;user-select:none;touch-action:manipulation}
+header button{background:#fff2;color:#fff;border-color:#fff4}
+button.on{background:var(--brand);color:#fff}
+main{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;padding:14px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc);margin:6px 0}
+.rung{border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:8px;background:var(--card);overflow-x:auto}
+.cm{font-size:12px;color:var(--mut)}
+.rr{display:flex;align-items:flex-start;border-left:3px solid var(--on);border-right:3px solid var(--off);min-width:max-content;width:100%}
+.rr.ok{border-right-color:var(--on)}
+.el{flex:1;min-width:84px;display:flex;flex-direction:column}
+.lb{font:11px monospace;text-align:center;height:16px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 2px}
+.sb{height:14px;font-size:10px;color:var(--mut);text-align:center}
+.rw{display:flex;align-items:center;height:30px}
+.w{flex:1;height:3px;background:var(--off)}.w.on{background:var(--on)}
+.sym{display:inline-flex;align-items:center;justify-content:center;color:var(--off);font-weight:700}
+.sym.on{color:var(--on)}
+.c{width:16px;height:24px;border-left:3px solid;border-right:3px solid}
+.c u{text-decoration:none;font-size:14px}
+.o{width:22px;height:24px;border-left:3px solid;border-right:3px solid;border-radius:50%}
+.b{min-width:38px;height:24px;border:2px solid;border-radius:3px;font-size:11px;padding:0 3px}
+.br{display:flex;flex-direction:column;border-left:3px solid var(--off);border-right:3px solid var(--off)}
+.br.i{border-left-color:var(--on)}.br.q{border-right-color:var(--on)}
+.brow{display:flex}
+textarea{width:100%;height:190px;font:12px/1.5 monospace;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+#err{color:#d33;min-height:18px;margin:2px 0}.hint{color:var(--mut);font-size:12px}
+canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:8px;display:block}
+table{width:100%;border-collapse:collapse;font:12px monospace}td{padding:3px 6px;border-bottom:1px solid var(--line)}
+tr[data-t]{cursor:pointer}.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--off)}.dot.on{background:var(--on)}
+.fb{color:#fff;background:var(--brand);padding:0 5px;border-radius:3px}
+footer{padding:12px 14px;color:var(--mut);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+<svg class="logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#fff3"/><path d="M4 20Q10 7 16 18Q22 7 28 20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+<div><b>HẢI ÂU AUTOMATION</b><small>Ladder Lab</small></div>
+<span id="badge" class="badge"></span><div class="sp"></div>
+<button id="bRun"></button><button id="bPause"></button><button id="bScan"></button><button id="bReset"></button><button id="bLang">EN</button>
+</header>
+<main>
+<section>
+<h2 data-i="ladder"></h2><div id="lad"></div>
+<h2 data-i="editor"></h2>
+<textarea id="src" spellcheck="false"></textarea>
+<div class="row"><button id="bApply" data-i="apply"></button><button id="bExp" data-i="exp"></button>
+<label class="btn"><span data-i="imp"></span><input type="file" id="fIn" accept=".json" hidden></label></div>
+<div id="err"></div><p class="hint" data-i="syn"></p>
+</section>
+<section>
+<h2 data-i="lab"></h2>
+<canvas id="cv" width="640" height="210"></canvas>
+<div class="row">
+<button id="kStart">START</button><button id="kStop">STOP</button><button id="kRst">RESET</button><button id="kEs">E-STOP</button>
+<button id="kBox" data-i="spawn"></button>
+<label><input type="checkbox" id="kAuto" checked> <span data-i="auto"></span></label>
+</div>
+<h2 data-i="tags"></h2><div id="tags"></div>
+</section>
+</main>
+<footer data-i="disc"></footer>
+<script>
+const $=s=>document.querySelector(s),E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const T={vi:{run:'▶ Chạy',pause:'⏸ Tạm dừng',scan:'⏭ Quét 1 lần',reset:'↺ Reset',ladder:'Chương trình Ladder',editor:'Soạn thảo (mỗi dòng = 1 rung)',apply:'Áp dụng',exp:'Xuất JSON',imp:'Nhập JSON',lab:'Mô phỏng băng tải',tags:'Bảng tag (bấm để Force 1 → 0 → bỏ)',spawn:'Thêm hộp',auto:'Tự thêm hộp',syn:'Cú pháp: XIC(tag) XIO(tag) OTE(tag) TON(tên,ms) CTU(tên,số) RES(tên). [ a , b ] là nhánh song song. Dòng bắt đầu bằng // là ghi chú.',disc:'Mô phỏng phục vụ học tập, không thay thế phần mềm hoặc PLC thật. Không liên kết với Rockwell Automation.',rn:'ĐANG CHẠY',pa:'TẠM DỪNG',sh:'Đã giao',rung:'Rung'},
+en:{run:'▶ Run',pause:'⏸ Pause',scan:'⏭ Scan once',reset:'↺ Reset',ladder:'Ladder program',editor:'Editor (one line = one rung)',apply:'Apply',exp:'Export JSON',imp:'Import JSON',lab:'Conveyor simulation',tags:'Tags (click to Force 1 → 0 → off)',spawn:'Add box',auto:'Auto-add boxes',syn:'Syntax: XIC(tag) XIO(tag) OTE(tag) TON(name,ms) CTU(name,preset) RES(name). [ a , b ] is a parallel branch. Lines starting with // are comments.',disc:'Educational simulation; not a substitute for real software or PLCs. Not affiliated with Rockwell Automation.',rn:'RUNNING',pa:'PAUSED',sh:'Shipped',rung:'Rung'}};
+let lang='vi',mode='run',prog=[],S={bits:{},tm:{},ct:{},force:{}},boxes=[],shipped=0,spawnT=0,off=0,pe=false,ui={start:0,stop:0,rst:0,es:0};
+const DEF={STOP_PB_NC:true,ESTOP_OK:true};
+const SAMPLE=`// R0: Start/Stop tự giữ. Motor chạy khi bấm START, dừng khi STOP, E-STOP hoặc thùng đầy
+[XIC(START_PB),XIC(MOTOR_RUN)] XIC(STOP_PB_NC) XIC(ESTOP_OK) XIO(FULL) OTE(MOTOR_RUN)
+// R1: Đếm hộp đi qua cảm biến quang (cạnh lên)
+XIC(PHOTOEYE) CTU(BOX_CNT,5)
+// R2: Đủ 5 hộp thì báo thùng đầy
+XIC(BOX_CNT.DN) OTE(FULL)
+// R3: Bấm RESET để xóa bộ đếm
+XIC(RESET_PB) RES(BOX_CNT)
+// R4: Băng tải chạy liên tục 3 giây thì bật đèn
+XIC(MOTOR_RUN) TON(WARM_T,3000)
+XIC(WARM_T.DN) OTE(LAMP_WARM)`;
+
+/* ---------- parser ---------- */
+const OPS=['XIC','XIO','OTE','TON','CTU','RES'];
+function parseLine(s){let i=0;
+const ws=()=>{while(i<s.length&&/\s/.test(s[i]))i++};
+function seq(stop){const a=[];ws();while(i<s.length&&!stop.includes(s[i])){a.push(item());ws()}return a}
+function item(){
+ if(s[i]==='['){i++;const br=[seq(',]')];while(s[i]===','){i++;br.push(seq(',]'))}
+  if(s[i]!==']')throw Error('Thiếu ] / missing ]');i++;return{type:'br',branches:br}}
+ const m=/^([A-Za-z]+)\(([^)]*)\)/.exec(s.slice(i));if(!m)throw Error('Syntax: '+s.slice(i,i+14));
+ i+=m[0].length;const op=m[1].toUpperCase();if(!OPS.includes(op))throw Error('Unknown: '+op);
+ const a=m[2].split(',').map(x=>x.trim());if(!/^[A-Za-z_][A-Za-z0-9_.]*$/.test(a[0]))throw Error('Tag?: '+a[0]);
+ const pre=a[1]===undefined?undefined:Number(a[1]);
+ if((op==='TON'||op==='CTU')&&!(pre>=0))throw Error(op+' needs preset');
+ return{type:op,tag:a[0],pre}}
+const r=seq('');if(i<s.length)throw Error('Syntax: '+s.slice(i,i+14));return r}
+function parse(t){const rg=[];let cm='';
+ for(const raw of t.split('\n')){const l=raw.trim();if(!l)continue;if(l.startsWith('//')){cm=l.slice(2).trim();continue}
+  try{rg.push({items:parseLine(l),cm})}catch(e){throw Error(T[lang].rung+' '+rg.length+': '+e.message)}cm=''}
+ return rg}
+function sync(){const b=new Set(),t={},c={};
+ const wk=a=>a.forEach(it=>{if(it.type==='br')it.branches.forEach(wk);else if(it.type==='TON')t[it.tag]=it.pre;else if(it.type==='CTU')c[it.tag]=it.pre;else if(it.type!=='RES'&&!it.tag.includes('.'))b.add(it.tag)});
+ prog.forEach(r=>wk(r.items));
+ const nb={};b.forEach(n=>nb[n]=n in S.bits?S.bits[n]:(DEF[n]??false));S.bits=nb;
+ const nt={},nc={};
+ for(const n in t)nt[n]=Object.assign(S.tm[n]||{acc:0,dn:false,en:false,tt:false},{pre:t[n]});
+ for(const n in c)nc[n]=Object.assign(S.ct[n]||{acc:0,dn:false,last:false},{pre:c[n]});
+ S.tm=nt;S.ct=nc}
+
+/* ---------- PLC scan ---------- */
+function val(n){if(n in S.force)return !!S.force[n];const d=n.indexOf('.');
+ if(d>0){const o=S.tm[n.slice(0,d)]||S.ct[n.slice(0,d)],m=n.slice(d+1).toUpperCase();if(!o)return false;return m==='DN'?!!o.dn:m==='EN'?!!o.en:m==='TT'?!!o.tt:false}
+ return !!S.bits[n]}
+function evalSeq(a,pw,dt){for(const it of a){it.pin=pw;
+ if(it.type==='br'){let r=false;for(const b of it.branches)r=evalSeq(b,pw,dt)||r;pw=r}
+ else if(it.type==='XIC'||it.type==='XIO'){const v=val(it.tag);pw=pw&&(it.type==='XIC'?v:!v)}
+ else if(it.type==='OTE')S.bits[it.tag]=pw;
+ else if(it.type==='TON'){const t=S.tm[it.tag];
+  if(pw){t.en=true;if(!t.dn)t.acc=Math.min(t.pre,t.acc+dt);t.dn=t.acc>=t.pre;t.tt=!t.dn}else{t.acc=0;t.en=t.dn=t.tt=false}}
+ else if(it.type==='CTU'){const c=S.ct[it.tag];if(pw&&!c.last)c.acc++;c.last=pw;c.dn=c.acc>=c.pre}
+ else if(it.type==='RES'&&pw){const o=S.tm[it.tag]||S.ct[it.tag];if(o){o.acc=0;o.dn=false}}
+ it.pout=pw}return pw}
+function scan(dt){
+ const w=(n,v)=>{if(n in S.bits)S.bits[n]=v};
+ w('START_PB',!!ui.start);w('STOP_PB_NC',!ui.stop);w('ESTOP_OK',!ui.es);w('RESET_PB',!!ui.rst);w('PHOTOEYE',pe);
+ for(const r of prog)r.out=evalSeq(r.items,true,dt)}
+
+/* ---------- conveyor physics ---------- */
+const W=640,BW=50,BH=38,PEX=400,BY=140;
+function phys(dt){const run=val('MOTOR_RUN'),sp=run?150:0;off+=sp*dt;
+ for(const b of boxes)b.x+=sp*dt;
+ for(let i=boxes.length-1;i>=0;i--)if(boxes[i].x>W){boxes.splice(i,1);shipped++}
+ if($('#kAuto').checked){spawnT+=dt;if(spawnT>1.8){spawnT=0;spawn()}}
+ pe=boxes.some(b=>b.x<=PEX&&PEX<=b.x+BW)}
+function spawn(){if(boxes.every(b=>b.x>BW+30))boxes.push({x:10})}
+function draw(){const c=$('#cv').getContext('2d');
+ c.fillStyle='#ece8e3';c.fillRect(0,0,W,210);
+ c.fillStyle='#3a3a40';c.fillRect(0,BY,W,16);
+ c.strokeStyle='#777';c.lineWidth=2;
+ for(let x=-(off%24);x<W;x+=24){c.beginPath();c.moveTo(x,BY+2);c.lineTo(x,BY+14);c.stroke()}
+ c.fillStyle='#555';for(let x=20;x<W;x+=60){c.beginPath();c.arc(x,BY+30,7,0,7);c.fill()}
+ for(const b of boxes){c.fillStyle='#c8903f';c.fillRect(b.x,BY-BH,BW,BH);c.fillStyle='#e8c07a';c.fillRect(b.x+BW/2-4,BY-BH,8,BH)}
+ c.fillStyle='#444';c.fillRect(PEX-9,62,18,14);
+ c.strokeStyle=pe?'#f5b400':'#e63946';c.lineWidth=3;c.beginPath();c.moveTo(PEX,76);c.lineTo(PEX,pe?BY-BH:BY);c.stroke();
+ const lamp=(x,on,col,t)=>{c.fillStyle=on?col:'#999';c.beginPath();c.arc(x,24,11,0,7);c.fill();c.fillStyle='#333';c.font='10px Arial';c.textAlign='center';c.fillText(t,x,48)};
+ lamp(28,val('MOTOR_RUN'),'#22c55e','RUN');lamp(76,val('FULL'),'#ef4444','FULL');lamp(124,val('LAMP_WARM'),'#f59e0b','WARM');
+ c.textAlign='right';c.font='bold 14px Arial';c.fillStyle='#222';
+ const k=S.ct.BOX_CNT;c.fillText((k?'BOX_CNT '+k.acc+'/'+k.pre+'   ':'')+T[lang].sh+': '+shipped,W-12,28)}
+
+/* ---------- ladder view ---------- */
+const w=on=>`<i class="w${on?' on':''}"></i>`;
+function ri(it){
+ if(it.type==='br'){const n=Math.max(1,...it.branches.map(b=>b.length));
+  return `<div class="br${it.pin?' i':''}${it.pout?' q':''}" style="flex:${n}">`+it.branches.map(b=>`<div class="brow">${b.length?b.map(ri).join(''):`<div class="el"><div class="lb"></div><div class="rw">${w(it.pin)}</div><div class="sb"></div></div>`}</div>`).join('')+'</div>'}
+ let sym,sub=it.type;
+ if(it.type==='XIC')sym='<b class="sym c'+(it.pout?' on':'')+'"></b>';
+ else if(it.type==='XIO')sym='<b class="sym c'+(it.pout?' on':'')+'"><u>/</u></b>';
+ else if(it.type==='OTE')sym='<b class="sym o'+(it.pout?' on':'')+'"></b>';
+ else{sym='<b class="sym b'+(it.pout?' on':'')+'">'+it.type+'</b>';
+  const o=S.tm[it.tag]||S.ct[it.tag];sub=o&&it.pre!==undefined?(o.acc+'/'+o.pre):it.type}
+ return `<div class="el"><div class="lb" title="${E(it.tag)}">${E(it.tag)}</div><div class="rw">${w(it.pin)}${sym}${w(it.pout)}</div><div class="sb">${sub}</div></div>`}
+function render(){
+ $('#lad').innerHTML=prog.map((r,i)=>`<div class="rung"><div class="cm">${T[lang].rung} ${i}${r.cm?' — '+E(r.cm):''}</div><div class="rr${r.out?' ok':''}">${r.items.map(ri).join('')}</div></div>`).join('');
+ let h='<table>';
+ for(const n in S.bits){const f=n in S.force;h+=`<tr data-t="${E(n)}"><td width="20"><i class="dot${val(n)?' on':''}"></i></td><td>${E(n)}</td><td>${f?'<b class="fb">F'+(S.force[n]?1:0)+'</b>':''}</td></tr>`}
+ for(const n in S.tm)h+=`<tr><td></td><td>${E(n)} (TON)</td><td>${Math.round(S.tm[n].acc)}/${S.tm[n].pre} ms</td></tr>`;
+ for(const n in S.ct)h+=`<tr><td></td><td>${E(n)} (CTU)</td><td>${S.ct[n].acc}/${S.ct[n].pre}</td></tr>`;
+ $('#tags').innerHTML=h+'</table>';
+ $('#badge').textContent=mode==='run'?T[lang].rn:T[lang].pa}
+
+/* ---------- controls ---------- */
+function apply(){try{prog=parse($('#src').value);sync();$('#err').textContent=''}catch(e){$('#err').textContent=e.message}render()}
+function reset(){boxes=[];shipped=0;spawnT=0;pe=false;S.force={};
+ for(const n in S.bits)S.bits[n]=DEF[n]??false;
+ for(const n in S.tm)Object.assign(S.tm[n],{acc:0,dn:false,en:false,tt:false});
+ for(const n in S.ct)Object.assign(S.ct[n],{acc:0,dn:false,last:false});
+ prog.forEach(r=>{r.out=false});render()}
+function setLang(l){lang=l;document.documentElement.lang=l;
+ document.querySelectorAll('[data-i]').forEach(e=>e.textContent=T[l][e.dataset.i]);
+ $('#bRun').textContent=T[l].run;$('#bPause').textContent=T[l].pause;$('#bScan').textContent=T[l].scan;$('#bReset').textContent=T[l].reset;
+ $('#bLang').textContent=l==='vi'?'EN':'VI';render()}
+$('#bRun').onclick=()=>{mode='run';render()};
+$('#bPause').onclick=()=>{mode='pause';render()};
+$('#bScan').onclick=()=>{mode='pause';scan(20);phys(.02);render()};
+$('#bReset').onclick=reset;
+$('#bLang').onclick=()=>setLang(lang==='vi'?'en':'vi');
+$('#bApply').onclick=apply;
+$('#src').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();apply()}});
+$('#kBox').onclick=spawn;
+$('#kEs').onclick=e=>{ui.es=ui.es?0:1;e.currentTarget.classList.toggle('on',!!ui.es)};
+for(const [id,k] of [['#kStart','start'],['#kStop','stop'],['#kRst','rst']]){const b=$(id);
+ b.onpointerdown=()=>{ui[k]=1;b.classList.add('on')};
+ for(const ev of ['pointerup','pointerleave','pointercancel'])b.addEventListener(ev,()=>{ui[k]=0;b.classList.remove('on')})}
+$('#tags').onclick=e=>{const tr=e.target.closest('tr[data-t]');if(!tr)return;const n=tr.dataset.t;
+ if(!(n in S.force))S.force[n]=1;else if(S.force[n]===1)S.force[n]=0;else delete S.force[n];render()};
+$('#bExp').onclick=()=>{const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'haiau-ladder-lab',program:$('#src').value},null,2)],{type:'application/json'}));
+ a.download='haiau-ladder.json';a.click()};
+$('#fIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{$('#src').value=JSON.parse(r.result).program;apply()}catch(x){$('#err').textContent='JSON?'}};r.readAsText(f)};
+
+/* ---------- main loop ---------- */
+$('#src').value=SAMPLE;
+let last=performance.now(),lr=0;
+function loop(now){const dt=Math.min(now-last,50);last=now;
+ if(mode==='run'){scan(dt);phys(dt/1000)}
+ draw();if(now-lr>100){lr=now;render()}
+ requestAnimationFrame(loop)}
+setLang('vi');apply();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
