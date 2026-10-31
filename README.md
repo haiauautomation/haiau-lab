@@ -28,4 +28,4 @@ Ví dụ Start/Stop tự giữ:
 Khóa học PLC Rockwell bài bản: https://haiauautomation.com
 
 ## Giấy phép
-MIT, xem file LICENSE.
+Bảo lưu mọi quyền, xem file LICENSE.
